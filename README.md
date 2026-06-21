@@ -1,59 +1,79 @@
 # Continuum
 
-> **Grammarly catches grammar. Continuum catches broken canon.**
+> **Continuum is a consistency engine for evolving knowledge systems.**
 
-Continuum is a **live canon consistency engine for fictional worlds**. Writers load a story world, draft a new scene, and Continuum highlights every phrase that contradicts established canon — inline, with evidence quotes from the source and one-click verified fixes.
+Any system where facts accumulate over time — and new claims must stay consistent with what came before — has a consistency problem. Continuum solves it: load your source of truth, write something new, and every claim that contradicts established facts is flagged inline, with the exact evidence it conflicts with and a verified fix.
 
-Built for the hackathon. Demoed on Game of Thrones.
+We built and demoed on **fictional worlds** because they're the hardest case. Nonlinear timelines, branching paths, hidden knowledge, object state, world rules, character beliefs — if the engine works here, every other domain is easier. The same primitives power **AI agent memory**, product specs, legal case facts, and research claims.
 
 ---
 
 ## The Problem
 
-Every long story is a giant pile of mutable state — who's alive, who has the sword, who's at war, who knows the secret. Writers track it in their heads and in static "story bibles" that rot the moment writing outpaces note-taking.
+Every long-running knowledge system is a giant pile of mutable state. Someone — or something — must hold it all in their head simultaneously:
 
-Existing tools fail in specific ways:
+- **Who is in what state** — alive, dead, injured, exiled, under NDA, decommissioned, deprecated
+- **Where things are** — who owns an asset, which version is deployed, what's locked in a vault
+- **What relationships hold** — allies, enemies, dependencies, contracts — and *when* each became true
+- **What rules govern the world** — physics, API contracts, legal constraints, capability limits
+- **What order events happened** — and how claims that reference earlier state should be filtered
+- **Which branch of reality applies** — alternate outcomes, divergent versions, A/B states, hypotheticals
+- **Who knows what** — information asymmetry between agents, characters, or documents
 
-- **Generic AI writing assistants** generate more prose but have no persistent model of *your* world's state. They'll happily write a one-handed knight gripping with both gauntlets.
-- **Story bibles / wikis** are passive — they require manual upkeep and never *check* new writing against themselves.
-- **Beta readers / editors** catch continuity errors but are slow, expensive, and don't scale to live drafting.
+Existing tools fail the same way across every domain: knowledge accumulates in **passive documents** that require manual upkeep and never check new claims against themselves. They go stale the moment output outpaces note-taking. Generic AI makes it worse — it generates more content with no model of *your* established state.
 
-Continuum's job: **turn existing material into structured canon, then actively check new writing against it** — with evidence, in real time, inside the editor.
+**Continuum makes accumulated knowledge checkable.** Upload your source of truth, write something new, and see every inconsistency — with the exact evidence, severity, and a fix that preserves what you actually meant.
+
+---
+
+## Why Fiction Is the Proving Ground
+
+We didn't pick fiction arbitrarily. TV show writers' rooms, novelists, game designers, and show runners face the **most adversarial** version of this problem:
+
+- Facts span hundreds of pages and years of real time
+- Timelines are nonlinear — flashbacks, flash-forwards, myths, visions, prophecies
+- State branches — player choices, alternate outcomes, divergent episodes
+- Knowledge is asymmetric — characters believe different things; narrators reveal selectively
+- Contradictions are invisible to generic AI — which has no model of your specific world
+
+If Continuum catches broken canon in a Game of Thrones scene, it can catch contradictions in AI agent memory, product specs, and legal filings. The fiction case is harder.
+
+**The direct read-across: AI agent memory.** Long-running agents accumulate facts that drift, contradict, and branch across sessions — exactly the same primitives. An agent's memory is a canon; each new action is a scene; hallucinated or stale state is a continuity error. Continuum is the consistency layer that agent builders need.
 
 ---
 
 ## The Demo
 
-The demo runs on a preloaded **Game of Thrones** world with 8 canonical facts. Paste this scene into the editor and hit **Check Continuity**:
+The demo world is a preloaded **Game of Thrones** canon: 8 facts, a branching timeline, and two alternate-history branches. Paste this into the editor and hit **Check Continuity**:
 
 > *"Jaime tightened the straps on both gauntlets before drawing his sword. He had ridden from Winterfell at first light and reached King's Landing by sunset. Over the capital, three dragons wheeled in formation — a sight every lord had grown up seeing. In the branch where Robb Stark survived the massacre at the Twins, his mother Catelyn was already dead in the great hall."*
 
-**Four high-severity contradictions fire, each with canon evidence:**
+**Four high-severity contradictions surface, each with the exact canon evidence:**
 
-| Phrase | Issue Type | Canon Violation |
-|--------|-----------|-----------------|
+| Highlighted Phrase | Issue | Evidence |
+|--------------------|-------|----------|
 | "both gauntlets" | `character_state` | Jaime lost his right hand after capture |
-| "reached King's Landing by sunset" | `travel_time` | Winterfell → King's Landing takes weeks |
+| "reached King's Landing by sunset" | `travel_time` | Winterfell → King's Landing takes weeks of hard riding |
 | "dragons wheeled … every lord had grown up seeing" | `world_rule` | No living dragons existed until Daenerys hatched hers |
 | "Robb survived … Catelyn was already dead" | `branch` | In the Robb-lives branch, Catelyn also survived |
 
-**Then the smart part:** flip the context chip to *Flashback — before Jaime's capture* and type `"Jaime caught the wine cup with both hands."` — **zero warnings.** The lost-hand fact isn't in force yet. The timeline visualization shows "you are here" before the event and greys out the fact. The model never even sees the conflicting fact — the time filtering happens in code before the LLM call.
+**The timeline beat:** flip the context chip to *Flashback — before Jaime's capture* and write `"Jaime caught the wine cup with both hands."` — **zero warnings.** The lost-hand fact isn't in force yet. The timeline visualization shows "you are here" before the event and greys it out. The model never even sees the conflicting fact — the filtering happens in code before any LLM call.
 
 ---
 
 ## Architecture
 
-### Three-Panel Editor
+### Three-Panel Interface
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  Continuum   [ Demo World: Game of Thrones ]    [Check Continuity]  │
 ├──────────────┬───────────────────────────────────┬───────────────┤
-│  STORY BIBLE │  SCENE EDITOR                      │  ISSUES       │
-│              │  Context: [Main timeline ○]         │               │
-│  Characters  │                                    │  ● HIGH       │
-│  Locations   │  Jaime tightened the straps on     │  char_state   │
-│  World Rules │  ░both gauntlets░ before drawing   │               │
+│  KNOWLEDGE   │  DRAFT / INPUT                     │  ISSUES       │
+│  BIBLE       │  Context: [Main timeline ○]         │               │
+│              │                                    │  ● HIGH       │
+│  Entities    │  Jaime tightened the straps on     │  char_state   │
+│  Rules       │  ░both gauntlets░ before drawing   │               │
 │  Timeline    │  his sword. He had ridden from     │  ● HIGH       │
 │  ──●── here  │  Winterfell at first light and     │  travel_time  │
 │  Branches    │  reached ░King's Landing by sunset░ │               │
@@ -63,40 +83,40 @@ The demo runs on a preloaded **Game of Thrones** world with 8 canonical facts. P
 
 ### The Engine Pipeline
 
-Every continuity check runs a **2-call hot path** — not an agentic loop. Speed matters for a live editor.
+Every consistency check runs a **2-call hot path** — not an agentic loop. Speed matters for a live editing experience.
 
 ```
-1. extractClaims(sceneText)          ← Claude Haiku (fast)
-   → Claim[] + inferredContext       (pre-fills context chips)
+1. extractClaims(inputText)             ← Claude Haiku (fast)
+   → Claim[] + inferredContext          (pre-fills context chips)
 
 2. filterFacts(claims, position, branch)   ← pure TypeScript
-   → only facts in force for this scene's time + branch
+   → only facts in force for this context's time window + branch
 
 3. detectContradictions(claims, facts)     ← Claude Sonnet + extended thinking
-   → ContinuityIssue[] with evidence, spans, suggested fixes
+   → Issue[] with evidence, spans, suggested fixes
 
-4. mapSpans(issues, sceneText)       ← indexOf + fuzzy fallback
-   → character offsets for TipTap decorations
+4. mapSpans(issues, inputText)          ← indexOf + fuzzy fallback
+   → character offsets for inline decorations
 ```
 
-The time/branch filtering in step 2 is the key insight: **the model only ever sees facts that are actually in force for this scene's position.** This kills flashback false-positives without asking the model to reason about chronology.
+The filtering in step 2 is the core accuracy insight: **the model only ever sees facts that are actually in force for this context.** This eliminates false positives from stale or future state without asking the model to reason about time. In agent memory terms: only facts that were established before this action are candidates for contradiction.
 
 ### Two Real Agents
 
-**Canon-builder agent** (`lib/agents/canonBuilder.ts`): a tool-using loop that converts raw canon text into structured entities, facts, events, and branches. Tools: `add_entity`, `add_fact`, `add_event`, `add_branch`, `search_existing_canon`. Self-reviews validity windows and branch tags before committing. Writes embeddings to Redis.
+**Knowledge-builder agent** (`lib/agents/canonBuilder.ts`): a tool-using loop that converts raw source text into structured entities, facts, events, and branches. Tools: `add_entity`, `add_fact`, `add_event`, `add_branch`, `search_existing_canon`. Self-reviews validity windows and branch tags before committing. Writes embeddings to Redis for retrieval and deduplication.
 
-**Repair verify-loop agent** (`lib/agents/repairVerify.ts`): when you click Apply Fix, it patches the text, re-runs the hot-path check on the patched span, and only returns `verified: true` if the original contradiction is gone and no new high-severity issues appeared. Never applies an unverified patch on the demo path.
+**Repair verify-loop agent** (`lib/agents/repairVerify.ts`): when you click Apply Fix, it patches the text, re-runs the hot-path check on the patched span, and only returns `verified: true` if the original contradiction is gone with no new issues introduced. Never applies an unverified patch.
 
-### Timeline & Branch Model
+### Time & Branch Model
 
-Every `CanonFact` has two nullable validity event IDs:
+Every fact has two nullable validity event IDs defining its window of truth:
 
 ```ts
 fact.validityStartEventId  // fact becomes true at this event
 fact.validityEndEventId    // fact stops being true at this event (exclusive)
 ```
 
-A scene's chronological position `p` (resolved from context chips) filters:
+A scene or action's chronological position `p` drives filtering:
 
 ```ts
 function isFactInForce(fact, p, events): boolean {
@@ -106,29 +126,41 @@ function isFactInForce(fact, p, events): boolean {
 }
 ```
 
-Main timeline → `p = +∞` (every established fact applies). Flashback before event X → `p < order(X)`. The model never sees filtered-out facts — no temporal reasoning in the prompt, no false positives.
+Main timeline → `p = +∞` (all established facts apply). Flashback → `p < order(anchorEvent)`. **The model never sees filtered-out facts.** No temporal reasoning in the prompt; no false positives.
 
-Branches are flat off `main`. Per-claim branch scoping fires when prose names a branch inline (e.g. *"in the branch where Robb survived"*) — the server resolves the branch name by substring match and filters facts for that claim's branch, making the GoT branch contradiction fire on the main timeline.
+Branches are flat off `main`. Per-claim branch scoping fires when text names an alternate branch inline — the server resolves it by substring match and filters facts for that claim's branch independently.
 
 ---
 
-## Data Model
+## Domain-Neutral Data Model
 
-All engine primitives are domain-neutral. The fiction-ness lives in the seed data, prompts, and UI labels — not the schema.
+The engine primitives contain no domain-specific assumptions. `Entity.type` is a string enum; for the fiction demo it holds `character | location | faction | object | event | rule`. For an agent memory system it holds `agent | session | capability | constraint`. The schema is identical.
 
 ```ts
-Entity         // character, location, faction, object, event, rule
-CanonFact      // text + factType + entityIds + sourceQuote + validity window + branchId
-TimelineEvent  // id + name + order (integer, in-universe sequence)
-Branch         // id + name + parentBranchId (flat off main for MVP)
-Claim          // extracted assertion from scene text + sourceSpan + impliedBranchId
-ContinuityIssue // issueType + severity + span + evidenceQuotes + suggestedFixes
-SuggestedFix   // replacement text + preservesVoice + optional canonUpdate
+Entity         // anything with identity that can have state
+CanonFact      // a statement that is true within a defined window + branch
+TimelineEvent  // a point in the ordering (integer, monotonic)
+Branch         // an alternate path from main (flat for MVP)
+Claim          // an assertion extracted from new input text
+ContinuityIssue // a claim that contradicts an in-force fact — with evidence + fixes
+SuggestedFix   // minimal edit to input text or update to knowledge base
 ```
 
-Issue types: `world_rule` · `travel_time` · `character_state` · `object_state` · `relationship` · `faction_state` · `knowledge_state` · `timeline` · `branch`
+The engine interface:
 
-Severity: `high` · `medium` · `low` — always phrased as "possible contradiction," never "error."
+```ts
+checkScene(claims: Claim[], facts: CanonFact[], context: SceneContext) => ContinuityIssue[]
+```
+
+Nothing here says "story." Swap the seed data and prompts, and the same pipeline checks:
+
+| Domain | "Canon" | "Scene" | "Contradiction" |
+|--------|---------|---------|-----------------|
+| Fiction / TV | Show bible | New scene draft | Broken continuity |
+| AI agent memory | Accumulated facts | New action / output | Hallucinated or stale state |
+| Product specs | Spec document | PR / implementation | Feature drift |
+| Legal | Case record | New filing or brief | Inconsistent claim |
+| Research | Prior literature | New paper claim | Conflicting finding |
 
 ---
 
@@ -140,9 +172,9 @@ Severity: `high` · `medium` · `low` — always phrased as "possible contradict
 | Editor | TipTap (ProseMirror) | Stable span decorations + programmatic text replace |
 | State | Zustand | Flat, typesafe; issues + scene + selection in one store |
 | AI | Anthropic Claude | Extended thinking on detection; structured tool-use outputs |
-| Memory | Upstash Redis + Vector | Canon embeddings, agent scratchpad, check cache |
-| Observability | Arize (OpenTelemetry) | Trace every AI step; shown before/after prompt improvement |
-| Validation | Zod + zod-to-json-schema | Shared schema as both type and tool `input_schema` |
+| Memory | Upstash Redis + Vector | Fact embeddings, agent scratchpad, check/ingest cache |
+| Observability | Arize (OpenTelemetry) | Named span per AI step; shown before/after prompt improvement |
+| Validation | Zod + zod-to-json-schema | Shared schema as both runtime type and tool `input_schema` |
 | Styling | Tailwind v4 | Dark editorial aesthetic — no chat bubbles |
 
 ---
@@ -151,43 +183,45 @@ Severity: `high` · `medium` · `low` — always phrased as "possible contradict
 
 ### Anthropic — the reasoning layer
 
-Every AI call is structured, not freeform:
+Every AI call is structured, never freeform:
 
 - **Claim extraction**: Haiku-class model returns `Claim[]` + `inferredContext` via `emit_claims` tool
 - **Contradiction detection**: Sonnet/Opus with **extended thinking** returns `ContinuityIssue[]` via `emit_issues` tool — this is the product
-- **Canon-builder agent**: mid/strong model with 5 tools; self-reviews before committing
+- **Knowledge-builder agent**: mid/strong model with 5 tools; self-reviews before committing facts
 - **Repair verify-loop agent**: fast model; proposes → patches → re-checks → confirms
 
-The closing pitch angle: *"Same primitives power AI agent memory — facts that accumulate, branch, and contradict over long runs. We proved it on the hardest narrative case first."*
+*"Claude extracts state, reasons about contradictions with extended thinking, and powers the agents that build and verify canon — the same architecture agent builders need for persistent memory consistency."*
 
-### Redis — story memory at scale
+### Redis — persistent memory at scale
 
 ```
-canon:fact:{id}              → fact JSON + embedding
-canon:idx:{projectId}        → vector index for KNN retrieval
-agent:canon:{sessionId}:*    → canon-builder working memory across tool turns
+canon:fact:{id}              → fact JSON + embedding vector
+canon:idx:{projectId}        → KNN vector index for semantic retrieval
+agent:canon:{sessionId}:*    → knowledge-builder working memory across tool turns
 check:{hash(text+context)}   → cached check result (demo pre-warm)
-ingest:{hash(text)}          → cached ingestion output (never cold-ingest on stage)
+ingest:{hash(text)}          → cached ingestion output
 ```
 
-`search_existing_canon` in the canon-builder agent hits the Redis vector index to deduplicate facts as it builds. Same `FactRetriever` interface switches between in-memory (dev) and Redis vector search (ship) with no engine changes.
+`search_existing_canon` hits the Redis vector index during ingestion to deduplicate before committing. Same `FactRetriever` interface switches between in-memory (dev) and Redis vector search (ship) with no engine changes.
 
-Pitch line: *"Claude reasons over structured state; Redis remembers the world."*
+*"Redis remembers the world so Claude can reason over it — retrieval, agent scratchpad, and result cache in one place."*
 
 ### Arize — observability-driven improvement
 
 Every AI step emits a named OpenTelemetry span:
 
 ```
-ai.claims.extract    → claims + inferredContext (fast model)
-ai.context.infer     → nested span within extract
+ai.claims.extract    → claims + inferredContext
+ai.context.infer     → nested within extract
 ai.issues.detect     → contradiction detection (+ extended thinking trace)
 ai.repair.propose    → fix proposal
 ai.repair.verify     → re-check pass/fail
 ai.canon.builder     → agent loop (per tool call sub-span)
 ```
 
-The demo shows a real before/after: Arize revealed over-flagging on the GoT draft → detection prompt tightened → improvement documented as `detect-v1.ts` → `detect-v2.ts`.
+Demo shows a real before/after: Arize revealed over-flagging on the GoT draft → detection prompt tightened → improvement documented as `detect-v1.ts` → `detect-v2.ts`.
+
+*"We trace every check, found over-flagging in Arize, tightened the prompt, and shipped the fix — here's the diff."*
 
 ---
 
@@ -199,10 +233,10 @@ continuum/
     page.tsx                      # three-panel shell
     api/
       check/route.ts              # POST — 2-call hot path (core)
-      ingest/route.ts             # POST — canon-builder agent + file upload
+      ingest/route.ts             # POST — knowledge-builder agent + file upload
       repair/route.ts             # POST — repair verify-loop
-      project/route.ts            # GET — full canon
-      canon/fact/route.ts         # POST — update canon from issue
+      project/route.ts            # GET — full knowledge base
+      canon/fact/route.ts         # POST — add/update a fact from an issue
       issue/[id]/route.ts         # PATCH — ignore / mark intentional
   components/
     panels/
@@ -213,22 +247,22 @@ continuum/
     useContinuumStore.ts          # Zustand store
     useCheck.ts                   # /api/check call + cache
   lib/
-    types.ts                      # all interfaces (Entity, CanonFact, ContinuityIssue…)
+    types.ts                      # all interfaces — domain-neutral primitives
     engine/
       checkScene.ts               # pipeline orchestrator — no Next.js dependency
-      resolveContext.ts           # SceneContext → resolvedPosition
+      resolveContext.ts           # context → chronological position
       filterFacts.ts              # time validity + branch filter
       mapSpans.ts                 # model quotes → character offsets
     ai/
       models.ts                   # explicit model routing per task
       schemas.ts                  # Zod schemas (= tool input_schema)
-      prompts/                    # extract, detect, fix, canon-builder templates
+      prompts/                    # extract, detect, fix, builder templates
       tasks/
         extractClaims.ts
         detectContradictions.ts
         generateFixes.ts
     agents/
-      canonBuilder.ts             # ingestion agent
+      canonBuilder.ts             # knowledge ingestion agent
       repairVerify.ts             # fix verify-loop agent
     store/
       memoryStore.ts              # in-memory (dev fallback)
@@ -238,93 +272,50 @@ continuum/
     world-moonstone.ts            # zero-IP fallback (The Moonstone Saga)
 ```
 
-The engine (`lib/engine/checkScene.ts`) has no Next.js dependency. The HTTP handler is a thin adapter. A browser extension or Google Docs add-on calls the same `/api/check` endpoint and gets back `ContinuityIssue[]` — no engine changes.
+`lib/engine/checkScene.ts` has no Next.js dependency. The HTTP handler is a thin adapter. A browser extension, Google Docs add-on, or agent runtime calls the same `/api/check` endpoint and receives `ContinuityIssue[]` — no engine changes required.
 
 ---
 
 ## Running Locally
 
 ```bash
-# Install
 npm install
 
-# Set env vars
 cp .env.example .env.local
+# Required:
 # ANTHROPIC_API_KEY=...
+# Optional (dev fallback works without these):
 # UPSTASH_REDIS_REST_URL=...
 # UPSTASH_REDIS_REST_TOKEN=...
 # UPSTASH_VECTOR_REST_URL=...
 # UPSTASH_VECTOR_REST_TOKEN=...
-# OPENAI_API_KEY=...         (for text-embedding-3-small)
+# OPENAI_API_KEY=...         (text-embedding-3-small for vector indexing)
 # ARIZE_SPACE_ID=...
 # ARIZE_API_KEY=...
 
-# Dev (in-memory fallback works with only ANTHROPIC_API_KEY)
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The GoT demo world loads on first render. Hit **Check Continuity** on the preloaded contradictory draft.
+Open [http://localhost:3000](http://localhost:3000). The GoT demo world loads immediately — no setup required. The app runs with only `ANTHROPIC_API_KEY` in dev; Redis and Arize are required for the full ship target.
 
 ---
 
-## The Canon
+## The Generalization
 
-The GoT seed ships 8 canonical facts with stable IDs. All scene prose is original — no copyrighted text reproduced.
-
-| Fact | Type | Validity |
-|------|------|----------|
-| Jaime lost his right sword hand after capture | `character_state` | from `evt_jaime_captured` |
-| Ned Stark was executed at King's Landing | `character_state` | from `evt_ned_executed` |
-| No living dragons existed in the known world | `world_rule` | until `evt_dragons_hatched` |
-| Daenerys's dragons are the first in a generation; no lord grew up knowing them | `world_rule` | from `evt_dragons_hatched` |
-| Winterfell → King's Landing takes weeks of hard riding | `world_rule` | always |
-| (Branch A) Robb Stark survived the massacre at the Twins | `branch_state` | `branch_robb_lives` |
-| (Branch A) Catelyn Stark also survived the Twins | `branch_state` | `branch_robb_lives` |
-| (Branch B / canon) Robb and Catelyn were killed at the Red Wedding | `branch_state` | `branch_canon` |
-
-Timeline event order: `evt_ned_executed` → `evt_jaime_captured` → `evt_red_wedding` → `evt_dragons_hatched`
-
-A zero-IP fallback world (**The Moonstone Saga**) ships in `seed/world-moonstone.ts` for local testing without pop-culture baggage.
-
----
-
-## The Closing Beat
-
-> Long-running AI agents are story engines without a story bible. They accumulate facts, contradict themselves, and never cite sources. Continuum is state management for narratives — and the consistency layer agent builders need.
+> Long-running AI agents are knowledge systems without a knowledge base. They accumulate facts, contradict themselves, and never cite sources. Continuum is the consistency layer they need — the same engine, different seed data and prompts.
 >
-> Same primitives: `Entity · CanonFact · Claim · Branch · ContinuityIssue`. Same engine. Different seed data and prompts. We proved it on Westeros first.
-
----
-
-## Build Milestones
-
-The build was sequenced so every milestone produces a demoable artifact:
-
-```
-M0  — Skeleton (three panels, types, seed data)
-M1  — Fully-faked clickable demo (permanent fallback)
-M2  — Real editor + TipTap decorations
-M3  — Real 2-call check endpoint
-M4  — JSON hardening + Arize tracing + demo cache
-M5  — Hybrid context chips + branch + time filtering
-M6  — Story bible polish
-M7  — Canon ingestion + canon-builder agent + Redis
-M8  — Timeline visualization ("you are here")
-M9  — Repair verify-loop agent
-M10 — Deploy + demo rehearsal
-M11 — Relationship graph (skip if behind)
-```
-
-Get the **fake** demo fully clickable (M1) before anything is real. That's the permanent fallback and the thing that ships on day one.
+> We chose the hardest case to prove it on first. Westeros has nonlinear time, branching history, hidden knowledge, and object state. If the engine catches broken canon there, it catches stale agent memory, drifted specs, and contradicted case facts too.
+>
+> Same primitives. Swappable config. One engine.
 
 ---
 
 ## What's Not Built (and Why)
 
-- No prose generation. Continuum generates *fixes* and *structured data* — never narrative content.
-- No chatbot UI. No message bubbles. This is a tool, not a buddy.
-- No production auth / accounts / billing.
-- No generic knowledge-graph / domain selector / legal templates. The engine is domain-neutral; the product is fiction, full stop.
-- No live cold-ingestion on stage. Demo ingestion is pre-cached.
+- **No prose generation.** Continuum generates *fixes* and *structured facts* — never content for the user's document.
+- **No chat UI.** This is a tool, not a conversational assistant. No message bubbles.
+- **No domain selector.** The engine is already domain-neutral; the product is focused. Generality is in the architecture, not a dropdown.
+- **No live cold-ingestion on stage.** All demo ingestion is pre-cached by hash.
+- **No production auth / billing / multi-tenancy.**
 
-> If a feature doesn't serve **canon → draft → contradiction → evidence → fix**, it's out.
+> If a feature doesn't serve **source of truth → new claim → contradiction → evidence → verified fix**, it's out.
