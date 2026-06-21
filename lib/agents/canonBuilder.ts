@@ -33,7 +33,12 @@ export async function runCanonBuilder(
   );
   if (!toolUse) return { entities: [], facts: [], events: [], branches: [], sourceId: '' };
 
-  const parsed = EmitCanonInput.parse(toolUse.input);
+  const parseResult = EmitCanonInput.safeParse(toolUse.input);
+  if (!parseResult.success) {
+    console.error('[canonBuilder] Schema parse failed:', JSON.stringify(parseResult.error.issues));
+    return { entities: [], facts: [], events: [], branches: [], sourceId: '' };
+  }
+  const parsed = parseResult.data;
 
   // Build name→id lookup from existing + newly staged entities
   const entityIdMap = new Map<string, string>();

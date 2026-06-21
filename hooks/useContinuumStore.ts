@@ -116,6 +116,8 @@ interface ContinuumState {
   addFacts(facts: CanonFact[]): void;
   addEvents(events: TimelineEvent[]): void;
   addBranches(branches: Branch[]): void;
+  deleteFact(factId: string): void;
+  deleteEntity(entityId: string): void;
 }
 
 export const useContinuumStore = create<ContinuumState>((set) => ({
@@ -205,4 +207,6 @@ export const useContinuumStore = create<ContinuumState>((set) => ({
   addFacts: (facts) => set((s) => ({ facts: [...s.facts, ...facts] })),
   addEvents: (events) => set((s) => ({ events: [...s.events, ...events] })),
   addBranches: (branches) => set((s) => ({ branches: [...s.branches, ...branches] })),
+  deleteFact: (factId) => set((s) => ({ facts: s.facts.filter(f => f.id !== factId) })),
+  deleteEntity: (entityId) => set((s) => ({ entities: s.entities.filter(e => e.id !== entityId) })),
 }));

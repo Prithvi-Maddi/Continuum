@@ -1,5 +1,5 @@
 import { getClient } from '../client';
-import { MODELS, DETECTION_THINKING_BUDGET } from '../models';
+import { MODELS } from '../models';
 import { EmitIssuesInput } from '../schemas';
 import { EMIT_ISSUES_TOOL } from '../toolSchema';
 import { buildDetectPrompt } from '../prompts/detectContradictions';
@@ -51,8 +51,12 @@ export async function detectContradictions(
     tool_choice: { type: 'any' },
   });
 
-  const toolUse = response.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
-  if (!toolUse) return [];
+  const msg = response as Anthropic.Message;
+  const toolUse = msg.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
+  if (!toolUse) {
+    console.warn('[detectContradictions] No tool call returned. Stop reason:', msg.stop_reason, '| Content types:', msg.content.map(b => b.type));
+    return [];
+  }
 
   const result = EmitIssuesInput.safeParse(toolUse.input);
   if (!result.success) {

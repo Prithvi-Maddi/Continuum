@@ -15,13 +15,13 @@ export async function runRepairVerify(
   world: WorldState,
 ): Promise<RepairResponse> {
   let replacement = fix?.replacement ?? null;
-  if (!replacement) replacement = await generateReplacement(issue);
+  if (!replacement) replacement = await generateReplacement(issue, undefined, sceneText);
 
   const patchedText = applyPatch(sceneText, issue.span, replacement);
   const v1 = await verifyPatch(patchedText, context, issue, world);
   if (v1.ok) return { patchedText, verified: true };
 
-  const alt = await generateReplacement(issue, 'Previous fix failed: ' + replacement);
+  const alt = await generateReplacement(issue, 'Previous fix failed: ' + replacement, sceneText);
   const patchedText2 = applyPatch(sceneText, issue.span, alt);
   const v2 = await verifyPatch(patchedText2, context, issue, world);
   if (v2.ok) return { patchedText: patchedText2, verified: true };
@@ -33,10 +33,22 @@ function applyPatch(text: string, span: { start: number; end: number }, replacem
   return text.slice(0, span.start) + replacement + text.slice(span.end);
 }
 
-async function generateReplacement(issue: ContinuityIssue, extra?: string): Promise<string> {
+function extractSpanContext(sceneText: string, highlightedText: string): string {
+  const idx = sceneText.indexOf(highlightedText);
+  if (idx === -1) return highlightedText;
+  const start = Math.max(0, idx - 60);
+  const end = Math.min(sceneText.length, idx + highlightedText.length + 60);
+  return (start > 0 ? '…' : '') + sceneText.slice(start, end) + (end < sceneText.length ? '…' : '');
+}
+
+async function generateReplacement(issue: ContinuityIssue, extra?: string, sceneText?: string): Promise<string> {
   const client = getClient();
+  const spanContext = sceneText
+    ? extractSpanContext(sceneText, issue.highlightedText)
+    : issue.highlightedText;
+
   const { system, user } = buildGenerateFixPrompt(
-    issue.highlightedText,
+    spanContext,
     issue.highlightedText,
     issue.explanation + (extra ? ' ' + extra : ''),
     issue.evidenceQuotes[0] ?? '',
@@ -53,9 +65,11 @@ async function generateReplacement(issue: ContinuityIssue, extra?: string): Prom
   });
 
   const toolUse = (response as Anthropic.Message).content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
-  if (!toolUse) return '[corrected text]';
-  const parsed = EmitFixesInput.parse(toolUse.input);
-  return parsed.fixes[0]?.replacement ?? '[corrected text]';
+  if (!toolUse) return issue.suggestedFixes[0]?.replacement ?? '[corrected text]';
+
+  const result = EmitFixesInput.safeParse(toolUse.input);
+  if (!result.success) return issue.suggestedFixes[0]?.replacement ?? '[corrected text]';
+  return result.data.fixes[0]?.replacement ?? '[corrected text]';
 }
 
 async function verifyPatch(

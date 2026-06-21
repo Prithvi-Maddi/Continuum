@@ -1,5 +1,6 @@
 'use client';
 import { useContinuumStore, HARDCODED_ISSUES } from './useContinuumStore';
+import type { ContinuityIssue, InferredContext } from '@/lib/types';
 
 function playIssueChime(count: number) {
   try {
@@ -69,15 +70,15 @@ export function useCheck() {
           if (event.type === 'progress') {
             pushTrace(event.message as string, (event.agent as 'extraction' | 'detection') ?? 'extraction');
           } else if (event.type === 'done') {
-            const issues = (event.issues as unknown[]) ?? [];
-            setIssues(issues as never);
+            const issues = (event.issues as ContinuityIssue[]) ?? [];
+            setIssues(issues);
             setLastChecked(Date.now());
             if (issues.length > 0) playIssueChime(issues.length);
             if (typeof event.resolvedPosition === 'number') {
               setResolvedPosition(event.resolvedPosition as number);
             }
             if (event.inferredContext && !scene.context.confirmed) {
-              applyInferredContext(event.inferredContext as never);
+              applyInferredContext(event.inferredContext as InferredContext);
             }
           } else if (event.type === 'error') {
             // Don't throw inside the parse loop — record and break

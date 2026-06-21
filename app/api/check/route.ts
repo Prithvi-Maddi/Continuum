@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import * as Sentry from '@sentry/nextjs';
 import { memoryStore } from '@/lib/store/memoryStore';
 import { checkScene } from '@/lib/engine/checkScene';
 import type { SceneContext } from '@/lib/types';
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
       })
       .catch(err => {
         console.error('[/api/check]', err);
+        Sentry.captureException(err, { tags: { route: '/api/check', projectId } });
         emit({ type: 'error', message: String(err) });
         writer.close();
       });

@@ -4,6 +4,14 @@ import { useContinuumStore } from '@/hooks/useContinuumStore';
 import { CanonGraph } from './CanonGraph';
 import type { Entity, CanonFact, TimelineEvent } from '@/lib/types';
 
+async function serverDeleteFact(projectId: string, factId: string) {
+  await fetch('/api/canon/fact', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ factId, projectId }),
+  });
+}
+
 function SectionHeader({ title, count, open, onToggle }: { title: string; count: number; open: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} style={{
@@ -19,6 +27,7 @@ function SectionHeader({ title, count, open, onToggle }: { title: string; count:
 }
 
 function EntityRow({ entity, isNew }: { entity: Entity; isNew: boolean }) {
+  const { deleteEntity, project } = useContinuumStore();
   const typeColors: Record<string, string> = {
     character: '#58a6ff', location: '#3fb950', faction: '#d29922',
     object: '#bc8cff', event: '#f85149', rule: '#79c0ff',
@@ -34,24 +43,56 @@ function EntityRow({ entity, isNew }: { entity: Entity; isNew: boolean }) {
       }}>
         {entity.type.slice(0, 4).toUpperCase()}
       </span>
-      <div>
+      <div style={{ flex: 1 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{entity.name}</div>
         {entity.summary && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{entity.summary}</div>}
       </div>
+      <button
+        onClick={() => deleteEntity(entity.id)}
+        title="Remove entity"
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+          color: 'var(--text-dim)', fontSize: 11, opacity: 0.4, flexShrink: 0,
+          lineHeight: 1,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
+      >
+        ✕
+      </button>
     </div>
   );
 }
 
 function FactRow({ fact, isNew }: { fact: CanonFact; isNew: boolean }) {
+  const { deleteFact, project } = useContinuumStore();
   return (
     <div
       className={isNew ? 'newly-added' : undefined}
-      style={{ padding: '5px 0', borderBottom: '1px solid var(--border)', borderRadius: 3 }}
+      style={{ padding: '5px 0', borderBottom: '1px solid var(--border)', borderRadius: 3, display: 'flex', alignItems: 'flex-start', gap: 6 }}
     >
-      <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.4 }}>{fact.text}</div>
-      {fact.branchId && (
-        <span style={{ fontSize: 10, color: 'var(--accent)', marginTop: 2, display: 'block' }}>Branch: {fact.branchId}</span>
-      )}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.4 }}>{fact.text}</div>
+        {fact.branchId && (
+          <span style={{ fontSize: 10, color: 'var(--accent)', marginTop: 2, display: 'block' }}>Branch: {fact.branchId}</span>
+        )}
+      </div>
+      <button
+        onClick={() => {
+          deleteFact(fact.id);
+          if (project) serverDeleteFact(project.id, fact.id).catch(() => {});
+        }}
+        title="Remove fact"
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+          color: 'var(--text-dim)', fontSize: 11, opacity: 0.4, flexShrink: 0,
+          lineHeight: 1, marginTop: 2,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
+      >
+        ✕
+      </button>
     </div>
   );
 }

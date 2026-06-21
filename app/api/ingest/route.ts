@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { runCanonBuilder } from '@/lib/agents/canonBuilder';
 import { memoryStore } from '@/lib/store/memoryStore';
 
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error('[/api/ingest]', error);
+    Sentry.captureException(error, { tags: { route: '/api/ingest' } });
     return NextResponse.json(
       { error: { code: 'ingest_error', message: String(error) } },
       { status: 502 },

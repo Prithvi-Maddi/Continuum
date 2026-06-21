@@ -8,6 +8,7 @@ import { useContinuumStore, FLASHBACK_DRAFT, DEMO_DRAFT } from '@/hooks/useConti
 import { useCheck } from '@/hooks/useCheck';
 import { useEffect, useState, useRef } from 'react';
 import { useCommitScene } from '@/hooks/useCommitScene';
+import { useVoiceDictation } from '@/hooks/useVoiceDictation';
 import type { ContinuityIssue, PresentationType } from '@/lib/types';
 
 // Walk ProseMirror doc text nodes and find PM positions for a target string
@@ -147,6 +148,14 @@ export function SceneEditor() {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [showCommitConfirm, setShowCommitConfirm] = useState(false);
 
+  const { state: dictationState, toggle: toggleDictation } = useVoiceDictation((transcript) => {
+    if (!editor) return;
+    const current = editor.getText();
+    const separator = current.trim() ? '\n\n' : '';
+    editor.commands.setContent(`<p>${(current + separator + transcript).split('\n').join('</p><p>')}</p>`);
+    setSceneText(editor.getText());
+  });
+
   // Refs keep the plugin closures stable across renders without stale values
   const issuesRef = useRef<ContinuityIssue[]>([]);
   issuesRef.current = issues;
@@ -189,6 +198,16 @@ export function SceneEditor() {
       editor.view.dispatch(editor.view.state.tr);
     }
   }, [issues, selectedIssueId, editor]);
+
+  // Auto-save scene text to localStorage (debounced 1s)
+  useEffect(() => {
+    const projectId = useContinuumStore.getState().project?.id ?? 'proj_got_demo';
+    const key = `continuum:draft:${projectId}`;
+    const t = setTimeout(() => {
+      try { localStorage.setItem(key, scene.text); } catch { /* storage full */ }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [scene.text]);
 
   // Keyboard shortcut: Enter to check
   useEffect(() => {
@@ -272,7 +291,26 @@ export function SceneEditor() {
         </div>
 
         {/* Demo shortcuts */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          {/* Deepgram voice dictation */}
+          <button
+            onClick={toggleDictation}
+            title={dictationState === 'recording' ? 'Stop recording' : 'Dictate scene (Deepgram)'}
+            style={{
+              fontSize: 15,
+              background: dictationState === 'recording' ? 'rgba(248,81,73,0.15)' : 'var(--bg-card)',
+              color: dictationState === 'recording' ? '#f85149' : dictationState === 'transcribing' ? 'var(--accent)' : 'var(--text-muted)',
+              border: `1px solid ${dictationState === 'recording' ? '#f85149' : 'var(--border)'}`,
+              borderRadius: 4, padding: '3px 8px', cursor: dictationState === 'transcribing' ? 'wait' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 4,
+              animation: dictationState === 'recording' ? 'pulse 1.5s ease-in-out infinite' : 'none',
+            }}
+          >
+            {dictationState === 'transcribing' ? '…' : '🎙'}
+            <span style={{ fontSize: 11 }}>
+              {dictationState === 'recording' ? 'Stop' : dictationState === 'transcribing' ? 'Transcribing…' : 'Dictate'}
+            </span>
+          </button>
           <button onClick={() => {
             setSceneText(scene.text); // trigger re-render
             setContext({ presentation: 'flashback', anchorEventId: 'evt_jaime_captured', branchId: null });
@@ -297,7 +335,7 @@ export function SceneEditor() {
           }}>
             Reset demo
           </button>
-        </div>
+        </div> {/* end demo shortcuts */}
       </div>
 
       {/* Checking indicator */}

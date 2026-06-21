@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { memoryStore } from '@/lib/store/memoryStore';
+import { deleteFact as vectorDeleteFact } from '@/lib/store/vectorStore';
 import type { CanonFact } from '@/lib/types';
 import { nanoid } from '@/lib/utils';
 
@@ -24,5 +25,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ fact });
   } catch (error) {
     return NextResponse.json({ error: { code: 'canon_error', message: String(error) } }, { status: 400 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { factId, projectId } = await req.json() as { factId: string; projectId: string };
+    if (!factId || !projectId) {
+      return NextResponse.json({ error: { code: 'missing_params' } }, { status: 400 });
+    }
+    memoryStore.deleteFact(projectId, factId);
+    vectorDeleteFact(factId).catch(() => {});
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: { code: 'delete_error', message: String(error) } }, { status: 400 });
   }
 }

@@ -3,6 +3,7 @@ import path from 'path';
 import type { WorldState, Entity, CanonFact, TimelineEvent, Branch, CanonSource, Project } from '../types';
 import { GOT_WORLD } from '../../seed/world';
 import { nanoid } from '../utils';
+import { indexFact } from './vectorStore';
 
 const DATA_PATH = path.join(process.cwd(), 'data', 'worlds.json');
 
@@ -72,6 +73,13 @@ export const memoryStore = {
   addFact(projectId: string, f: CanonFact): void {
     const w = this.getWorld(projectId);
     _worlds.set(projectId, { ...w, facts: [...w.facts, f] });
+    saveToDisk(_worlds);
+    indexFact(f).catch(() => {}); // async, non-blocking
+  },
+
+  deleteFact(projectId: string, factId: string): void {
+    const w = this.getWorld(projectId);
+    _worlds.set(projectId, { ...w, facts: w.facts.filter(f => f.id !== factId) });
     saveToDisk(_worlds);
   },
 

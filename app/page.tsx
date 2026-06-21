@@ -18,7 +18,7 @@ export async function loadProject(projectId: string) {
 export default function Home() {
   const {
     setProject, setEntities, setFacts, setEvents, setBranches,
-    setProjectList, addToProjectList, setIssues,
+    setProjectList, addToProjectList, setIssues, setSceneText,
   } = useContinuumStore();
 
   const [leftWidth, setLeftWidth] = useState(280);
@@ -40,6 +40,11 @@ export default function Home() {
         setFacts(world.facts ?? []);
         setEvents(world.events ?? []);
         setBranches(world.branches ?? []);
+        // Restore autosaved draft if available
+        try {
+          const saved = localStorage.getItem(`continuum:draft:${world.project.id}`);
+          if (saved) setSceneText(saved);
+        } catch { /* localStorage unavailable */ }
       }
     }).catch(() => {
       import('@/seed/world').then(mod => {
