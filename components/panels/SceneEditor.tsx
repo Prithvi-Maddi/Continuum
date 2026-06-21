@@ -311,50 +311,6 @@ export function SceneEditor() {
               {dictationState === 'recording' ? 'Stop' : dictationState === 'transcribing' ? 'Transcribing…' : 'Dictate'}
             </span>
           </button>
-          <button
-            onClick={async () => {
-              // Inject a known-bad change into the current scene, then auto-run check.
-              // Picks a contradiction-friendly substitution based on what's actually in the text.
-              const text = editor?.getText() ?? scene.text;
-              const swaps: Array<[RegExp, string]> = [
-                [/\bhis right hand\b/i, 'both hands'],
-                [/\bhis left hand\b/i, 'both hands'],
-                [/\bhis left gauntlet\b/i, 'both gauntlets'],
-                [/\bweeks later\b/i, 'by sunset'],
-                [/\bone hand\b/i, 'both hands'],
-                [/\bdragons (are|were) (a )?myth\b/i, 'dragons were a sight every lord had grown up seeing'],
-                [/\bnever\b/i, 'always'],
-                [/\bsurvived\b/i, 'died'],
-                [/\bdied\b/i, 'survived'],
-                [/\bdrew his sword\b/i, 'drew both of his swords'],
-              ];
-              let mutated = text;
-              let used = false;
-              for (const [re, replacement] of swaps) {
-                if (re.test(mutated)) {
-                  mutated = mutated.replace(re, replacement);
-                  used = true;
-                  break;
-                }
-              }
-              if (!used) {
-                // Append a contradiction at the end if nothing matched
-                mutated = text.trimEnd() + ' Jaime raised both his hands and clapped, his right palm meeting his left.';
-              }
-              if (editor) editor.commands.setContent(`<p>${mutated.split('\n').join('</p><p>')}</p>`);
-              setSceneText(mutated);
-              // Short delay so editor state propagates before runCheck reads the store
-              setTimeout(() => runCheck(), 50);
-            }}
-            title="Mutate the scene to violate canon, then run a check"
-            style={{
-              fontSize: 11, color: '#f85149', background: 'rgba(248,81,73,0.08)',
-              border: '1px solid #f8514955', borderRadius: 4, padding: '3px 8px', cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            ⚡ Inject contradiction
-          </button>
           <button onClick={() => {
             setSceneText(scene.text); // trigger re-render
             setContext({ presentation: 'flashback', anchorEventId: 'evt_jaime_captured', branchId: null });

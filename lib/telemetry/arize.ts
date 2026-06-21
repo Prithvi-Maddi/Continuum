@@ -17,7 +17,7 @@ export function initArize(): void {
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
     const { AnthropicInstrumentation } = require('@arizeai/openinference-instrumentation-anthropic') as any;
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-    const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-base') as any;
+    const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node') as any;
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
     const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http') as any;
     // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
@@ -41,8 +41,9 @@ export function initArize(): void {
       headers,
     });
 
-    const provider = new NodeTracerProvider();
-    provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+    const provider = new NodeTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)],
+    });
     provider.register();
 
     registerInstrumentations({
