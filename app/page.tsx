@@ -1,65 +1,122 @@
-import Image from "next/image";
+'use client';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { TopBar } from '@/components/TopBar';
+import { StoryBible } from '@/components/panels/StoryBible';
+import { SceneEditor } from '@/components/panels/SceneEditor';
+import { IssuePanel } from '@/components/panels/IssuePanel';
+import { useContinuumStore, HARDCODED_ISSUES } from '@/hooks/useContinuumStore';
+
+const DRAG_MIN = 160;
+const DRAG_MAX = 600;
+
+export async function loadProject(projectId: string) {
+  const res = await fetch(`/api/project?id=${encodeURIComponent(projectId)}`);
+  if (!res.ok) throw new Error(`Failed to load project ${projectId}`);
+  return res.json();
+}
 
 export default function Home() {
+  const {
+    setProject, setEntities, setFacts, setEvents, setBranches,
+    setProjectList, addToProjectList, setIssues,
+  } = useContinuumStore();
+
+  const [leftWidth, setLeftWidth] = useState(280);
+  const [rightWidth, setRightWidth] = useState(320);
+  const dragging = useRef<'left' | 'right' | null>(null);
+  const startX = useRef(0);
+  const startW = useRef(0);
+
+  // Load project list + default project on mount
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/project').then(r => r.json()),
+      loadProject('proj_got_demo').catch(() => null),
+    ]).then(([list, world]) => {
+      if (Array.isArray(list)) setProjectList(list);
+      if (world?.project) {
+        setProject(world.project);
+        setEntities(world.entities ?? []);
+        setFacts(world.facts ?? []);
+        setEvents(world.events ?? []);
+        setBranches(world.branches ?? []);
+      }
+    }).catch(() => {
+      import('@/seed/world').then(mod => {
+        setProject(mod.PROJECT);
+        setEntities(mod.ENTITIES);
+        setFacts(mod.FACTS);
+        setEvents(mod.EVENTS);
+        setBranches(mod.BRANCHES);
+        setProjectList([{ id: mod.PROJECT.id, name: mod.PROJECT.name }]);
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'F' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        useContinuumStore.getState().setIssues(HARDCODED_ISSUES);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const startDrag = useCallback((side: 'left' | 'right') => (e: React.MouseEvent) => {
+    dragging.current = side;
+    startX.current = e.clientX;
+    startW.current = side === 'left' ? leftWidth : rightWidth;
+    e.preventDefault();
+  }, [leftWidth, rightWidth]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = e.clientX - startX.current;
+      if (dragging.current === 'left') {
+        setLeftWidth(Math.max(DRAG_MIN, Math.min(DRAG_MAX, startW.current + delta)));
+      } else {
+        setRightWidth(Math.max(DRAG_MIN, Math.min(DRAG_MAX, startW.current - delta)));
+      }
+    };
+    const onUp = () => { dragging.current = null; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  const handleStyle: React.CSSProperties = {
+    width: 5, cursor: 'col-resize', background: 'transparent', flexShrink: 0, position: 'relative', zIndex: 10,
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <TopBar />
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div style={{ width: leftWidth, flexShrink: 0, overflow: 'hidden' }}>
+          <StoryBible />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div style={handleStyle} onMouseDown={startDrag('left')}>
+          <div style={{ position: 'absolute', inset: '0 -1px', background: 'var(--border)', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--border)')} />
         </div>
-      </main>
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <SceneEditor />
+        </div>
+        <div style={handleStyle} onMouseDown={startDrag('right')}>
+          <div style={{ position: 'absolute', inset: '0 -1px', background: 'var(--border)', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--border)')} />
+        </div>
+        <div style={{ width: rightWidth, flexShrink: 0, overflow: 'hidden' }}>
+          <IssuePanel />
+        </div>
+      </div>
     </div>
   );
 }
