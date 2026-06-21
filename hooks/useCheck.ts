@@ -1,5 +1,5 @@
 'use client';
-import { useContinuumStore, HARDCODED_ISSUES } from './useContinuumStore';
+import { useContinuumStore } from './useContinuumStore';
 import type { ContinuityIssue, InferredContext } from '@/lib/types';
 
 function playIssueChime(count: number) {
@@ -92,9 +92,10 @@ export function useCheck() {
       if (serverError) throw new Error(serverError);
     } catch (err) {
       console.error('[check] Failed:', err);
-      // Only fall back to hardcoded GoT issues on the demo project; otherwise show empty+error
-      const isDemo = (useContinuumStore.getState().project?.id ?? 'proj_got_demo') === 'proj_got_demo';
-      setIssues(isDemo ? HARDCODED_ISSUES : []);
+      const message = err instanceof Error ? err.message : String(err);
+      // Surface the real error in the trace panel instead of masking with hardcoded issues
+      pushTrace(`Check failed: ${message}`, 'detection');
+      setIssues([]);
       setLastChecked(Date.now());
     } finally {
       setChecking(false);

@@ -5,6 +5,26 @@ import type {
   SceneContext, ContinuityIssue, IssueStatus, InferredContext,
 } from '@/lib/types';
 
+// Issue status persistence: keyed by projectId + a stable fingerprint of the issue
+// (issueType + highlightedText), since issue IDs are regenerated every check.
+function issueFingerprint(issue: ContinuityIssue): string {
+  return `${issue.issueType}::${issue.highlightedText}`;
+}
+function statusStorageKey(projectId: string): string {
+  return `continuum:issueStatus:${projectId}`;
+}
+function loadIssueStatuses(projectId: string): Record<string, IssueStatus> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(statusStorageKey(projectId));
+    return raw ? JSON.parse(raw) as Record<string, IssueStatus> : {};
+  } catch { return {}; }
+}
+function saveIssueStatuses(projectId: string, statuses: Record<string, IssueStatus>): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(statusStorageKey(projectId), JSON.stringify(statuses)); } catch { /* full */ }
+}
+
 // Hardcoded GoT issues for M1 fallback (always available)
 export const HARDCODED_ISSUES: ContinuityIssue[] = [
   {
@@ -176,10 +196,28 @@ export const useContinuumStore = create<ContinuumState>((set) => ({
       },
     };
   }),
-  setIssues: (issues) => set({ issues }),
-  setIssueStatus: (id, status) => set((s) => ({
-    issues: s.issues.map(i => i.id === id ? { ...i, status } : i),
-  })),
+  setIssues: (issues) => set((s) => {
+    // Re-apply persisted statuses to any matching issues
+    const projectId = s.project?.id ?? 'proj_got_demo';
+    const saved = loadIssueStatuses(projectId);
+    const merged = issues.map(i => {
+      const persisted = saved[issueFingerprint(i)];
+      return persisted ? { ...i, status: persisted } : i;
+    });
+    return { issues: merged };
+  }),
+  setIssueStatus: (id, status) => set((s) => {
+    const projectId = s.project?.id ?? 'proj_got_demo';
+    const updated = s.issues.map(i => i.id === id ? { ...i, status } : i);
+    // Persist the change
+    const target = s.issues.find(i => i.id === id);
+    if (target) {
+      const saved = loadIssueStatuses(projectId);
+      saved[issueFingerprint(target)] = status;
+      saveIssueStatuses(projectId, saved);
+    }
+    return { issues: updated };
+  }),
   selectIssue: (id) => set({ selectedIssueId: id }),
   setChecking: (v) => set({ checking: v }),
   setIngesting: (v) => set({ ingesting: v }),

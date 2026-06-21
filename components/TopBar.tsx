@@ -4,6 +4,7 @@ import { useContinuumStore } from '@/hooks/useContinuumStore';
 import { useCheck } from '@/hooks/useCheck';
 import { IngestModal } from './IngestModal';
 import { HistoryModal } from './HistoryModal';
+import { IntegrationStatus } from './IntegrationStatus';
 
 export function TopBar() {
   const {
@@ -207,7 +208,8 @@ export function TopBar() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <IntegrationStatus />
         <button onClick={() => setShowHistory(true)} style={{
           background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border)',
           borderRadius: 6, padding: '6px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
